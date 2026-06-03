@@ -1,56 +1,73 @@
-# Chat with your PDFs
+# 📄 PaperLens — Chat with your PDFs
 
-This is a Streamlit application (https://know-your-pdf-document-adi.streamlit.app/) that allows users to chat with an AI model about the content of multiple uploaded PDF documents. The application leverages various NLP and document processing libraries to enable a seamless conversational experience.
+> Hybrid-retrieval RAG over your PDFs with cross-encoder reranking and grounded citations.
 
-<b>Please note that the application might run slower than expected due to the usage of HuggingFace, a free alternative to OpenAI API, which may have limitations in terms of processing speed.</b>
+**Live Demo:** _(coming after deploy)_
 
-## Setup
+Most "chat with PDF" tutorials use plain vector search and call it a day. PaperLens uses the same retrieval techniques production search systems do — and shows its work.
 
-To run the application, please ensure you have the following dependencies installed:
+## 🚀 What makes it different
 
-- Streamlit
-- Python-Dotenv
-- PyPDF2
-- Langchain
-- HuggingFace Transformers
+- **Hybrid retrieval** — Combines semantic (FAISS) and keyword (BM25) search, fused via Reciprocal Rank Fusion. Catches both meaning and exact technical terms.
+- **Cross-encoder reranking** — Top-20 retrieved chunks are rescored by a cross-encoder before being sent to the LLM. Production search systems work this way; tutorials don't.
+- **Grounded citations** — Every claim is cited with `[1] [2]` markers pointing to specific chunks. Sources panel shows the exact excerpt, source PDF, page number, and relevance score.
+- **Auto-generated summaries** — Each uploaded PDF is summarized on ingest, so you know what you have before you ask.
+- **Suggested follow-ups** — After each answer, three contextual follow-up questions appear as clickable buttons.
+- **Token tracking** — Live count of input and output tokens for the session.
+- **Markdown export** — Download the entire conversation with citations.
 
-You can install the dependencies using pip:
+## 🛠️ Tech Stack
 
-```bash
-pip install streamlit python-dotenv pypdf2 langchain transformers
+- **Streamlit** — Web UI
+- **LangChain 0.3** — Pipeline orchestration
+- **Gemini 2.5 Flash** — LLM
+- **gemini-embedding-001** — Embeddings
+- **FAISS** — Vector store
+- **BM25** — Keyword retrieval
+- **cross-encoder/ms-marco-MiniLM-L-6-v2** — Reranker
+- **pypdf** — PDF parsing
+
+## 📐 Architecture
+
+```
+![PaperLens Architecture](https://github.com/VishwasPrabhakara/Chat_with_PDF/raw/main/architecture.svg)
+
 ```
 
-## Usage
+## 🏃 Run locally
 
-1. Upload your PDFs by clicking on the "Upload your PDFs here" button in the sidebar.
-2. After uploading, click on the "Process" button to initiate the document processing.
-3. Enter your questions in the text input box and receive AI-generated responses.
+```bash
+git clone https://github.com/VishwasPrabhakara/Chat_with_PDF.git
+cd Chat_with_PDF
+python -m venv venv
+.\venv\Scripts\Activate.ps1     # Windows
+# source venv/bin/activate       # macOS/Linux
+pip install -r requirements.txt
 
-## How it Works
+echo "GOOGLE_API_KEY=your_key" > .env
 
-### PDF Processing
+streamlit run app.py
+```
 
-1. The uploaded PDFs are processed using PyPDF2 to extract the text content from each page.
-2. The extracted text is split into smaller chunks for more efficient processing using the `CharacterTextSplitter` module.
+Get a free Gemini API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 
-### Conversational AI
+## 📁 Project Structure
 
-1. HuggingFace's Transformers library is used to generate embeddings for the text chunks.
-2. The embeddings are then stored using the FAISS library for efficient retrieval.
-3. The conversational AI model, based on the `google/flan-t5-xxl` model, is used to provide responses based on the user's queries.
-4. The conversation history is maintained using the `ConversationBufferMemory` module.
+```
+.
+├── app.py             # Streamlit UI
+├── pipeline.py        # RAG pipeline (load, chunk, retrieve, rerank, generate)
+├── prompts.py         # Prompt templates
+├── test_pipeline.py   # Smoke test for the pipeline
+├── requirements.txt
+└── .env.example
+```
 
-## Files
+## 📝 Built By
 
-- `app.py`: The main script containing the Streamlit application and the necessary functions for document processing and conversation handling.
-- `htmlTemplates.py`: HTML templates for formatting the user and bot messages in the chat interface.
+**Vishwas Prabhakara** — ML Engineer @ IISc
+[GitHub](https://github.com/VishwasPrabhakara) · [LinkedIn](https://www.linkedin.com/in/vishwas-prabhakara-2050821b6/)
 
-## Note
+## 📄 License
 
-- Make sure to set up your environment variables using a `.env` file for any sensitive information.
-
-Feel free to customize the application and explore the codebase further to enhance its functionality.
-
-
-
-
+MIT
