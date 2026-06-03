@@ -2,7 +2,7 @@
 
 > Hybrid-retrieval RAG over your PDFs with cross-encoder reranking and grounded citations.
 
-**Live Demo:** _(coming after deploy)_
+**Live Demo:** https://vishwas-paperlens-chat-with-pdf.streamlit.app
 
 Most "chat with PDF" tutorials use plain vector search and call it a day. PaperLens uses the same retrieval techniques production search systems do — and shows its work.
 
