@@ -69,4 +69,4 @@ Get a free Gemini API key at [aistudio.google.com/apikey](https://aistudio.googl
 
 ## 📄 License
 
-MIT
+Apache 2.0
