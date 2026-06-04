@@ -30,7 +30,7 @@ Most "chat with PDF" tutorials use plain vector search and call it a day. PaperL
 ## 📐 Architecture
 
 ```
-![PaperLens Architecture](https://github.com/VishwasPrabhakara/Chat_with_PDF/raw/main/architecture.svg)
+![PaperLens Architecture](https://github.com/VishwasPrabhakara/Chat_with_PDF/blob/main/architecture.svg)
 
 ```
 
