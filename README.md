@@ -10,8 +10,6 @@ and page-level citation markers.
 [Live demo](https://vishwas-paperlens-chat-with-pdf.streamlit.app) |
 [Security notes](SECURITY.md)
 
-![PaperLens architecture](architecture.svg)
-
 ## What It Demonstrates
 
 - PDF text extraction with page-level metadata
