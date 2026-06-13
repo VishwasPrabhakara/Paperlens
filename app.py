@@ -13,7 +13,9 @@ from datetime import datetime
 import streamlit as st
 from dotenv import load_dotenv
 
-from pipeline import Answer, PaperLens
+from pipeline import Answer, MAX_FILES, PaperLens
+
+MAX_FILE_BYTES = 20 * 1024 * 1024
 
 load_dotenv()
 
@@ -72,8 +74,11 @@ def _markdown_export() -> str:
             ans: Answer | None = m.get("answer")
             if ans and ans.citations:
                 lines.append("**Citations**")
-                for i, c in enumerate(ans.citations, 1):
-                    lines.append(f"- [{i}] {c.source} · p.{c.page} — \"{c.excerpt}\"")
+                for c in ans.citations:
+                    lines.append(
+                        f"- [{c.marker}] {c.source} · p.{c.page} — "
+                        f"\"{c.excerpt}\""
+                    )
                 lines.append("")
     return "\n".join(lines)
 
@@ -84,9 +89,9 @@ def _render_answer(answer: Answer, key_prefix: str) -> None:
 
     if answer.citations:
         with st.expander(f"🔎 {len(answer.citations)} sources"):
-            for i, c in enumerate(answer.citations, 1):
+            for c in answer.citations:
                 st.markdown(
-                    f"**[{i}] {c.source} — page {c.page}** "
+                    f"**[{c.marker}] {c.source} — page {c.page}** "
                     f"<span style='color:#94a3b8;font-size:0.85em'>"
                     f"score {c.score:+.2f}</span>",
                     unsafe_allow_html=True,
@@ -123,11 +128,40 @@ with st.sidebar:
         accept_multiple_files=True,
     )
 
+    oversized_files = [
+        file.name
+        for file in pdf_files or []
+        if file.size > MAX_FILE_BYTES
+    ]
+    too_many_files = len(pdf_files or []) > MAX_FILES
+    if too_many_files:
+        st.error(f"Upload at most {MAX_FILES} PDFs at a time.")
+    if oversized_files:
+        st.error(
+            "Each PDF must be 20 MB or smaller: "
+            + ", ".join(oversized_files)
+        )
+
+    st.info(
+        "Data disclosure: extracted PDF text is sent to Google Gemini for "
+        "summaries, embeddings, answers, and follow-up generation. A local "
+        "cross-encoder reranks retrieved chunks."
+    )
+    data_consent = st.checkbox(
+        "I confirm these PDFs contain no confidential, regulated, or personal data."
+    )
+
     if st.button(
         "Process",
         type="primary",
         use_container_width=True,
-        disabled=not pdf_files or not api_key,
+        disabled=(
+            not pdf_files
+            or not api_key
+            or not data_consent
+            or too_many_files
+            or bool(oversized_files)
+        ),
     ):
         with st.spinner("Reading, chunking, embedding, summarizing…"):
             try:

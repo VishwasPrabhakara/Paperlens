@@ -34,6 +34,9 @@ TOP_K_RERANK = 5
 CHUNK_SIZE = 900
 CHUNK_OVERLAP = 150
 TOP_K_RETRIEVE = 20
+MAX_FILES = 5
+MAX_PAGES = 200
+MAX_EXTRACTED_CHARS = 1_000_000
 
 def load_pdf(file, source_name: str) -> list[Document]:
     """Read a PDF and return one Document per page.
@@ -168,6 +171,7 @@ class Reranker:
 
 @dataclass
 class Citation:
+    marker: int
     source: str
     page: int
     excerpt: str
@@ -208,6 +212,7 @@ def _build_context(
         blocks.append(f"[{i}] (Source: {source}, page {page})\n{doc.page_content}")
         citations.append(
             Citation(
+                marker=i,
                 source=source,
                 page=page,
                 excerpt=_truncate(doc.page_content, 280),
@@ -215,6 +220,24 @@ def _build_context(
             )
         )
     return blocks, citations
+
+
+def _select_citations(
+    answer_text: str,
+    citations: list[Citation],
+) -> list[Citation]:
+    """Return citations referenced by valid inline markers, in answer order."""
+    by_marker = {citation.marker: citation for citation in citations}
+    selected: list[Citation] = []
+    seen: set[int] = set()
+
+    for raw_marker in re.findall(r"\[(\d+)\]", answer_text):
+        marker = int(raw_marker)
+        if marker in by_marker and marker not in seen:
+            selected.append(by_marker[marker])
+            seen.add(marker)
+
+    return selected
 
 
 def _parse_followups(raw: str) -> list[str]:
@@ -254,9 +277,10 @@ class Generator:
         response = self.llm.invoke(prompt)
         usage = getattr(response, "usage_metadata", {}) or {}
 
+        answer_text = str(response.content)
         return Answer(
-            text=response.content,
-            citations=citations,
+            text=answer_text,
+            citations=_select_citations(answer_text, citations),
             tokens_in=usage.get("input_tokens", 0),
             tokens_out=usage.get("output_tokens", 0),
         )
@@ -293,12 +317,26 @@ class PaperLens:
 
     def ingest(self, files) -> None:
         """Accept iterable of (filename, file-like-object) pairs."""
+        files = list(files)
+        if len(files) > MAX_FILES:
+            raise ValueError(f"Upload at most {MAX_FILES} PDFs at a time.")
+
         all_docs: list[Document] = []
         for name, file_obj in files:
             page_docs = load_pdf(file_obj, source_name=name)
             if not page_docs:
                 continue
             all_docs.extend(page_docs)
+            if len(all_docs) > MAX_PAGES:
+                raise ValueError(
+                    f"Uploaded PDFs exceed the {MAX_PAGES}-page limit."
+                )
+            extracted_chars = sum(len(doc.page_content) for doc in all_docs)
+            if extracted_chars > MAX_EXTRACTED_CHARS:
+                raise ValueError(
+                    "Uploaded PDFs contain too much extracted text. "
+                    "Use a smaller document set."
+                )
             self.summaries[name] = self.generator.summarize(page_docs, name)
 
         if not all_docs:
